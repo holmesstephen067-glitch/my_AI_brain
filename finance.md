@@ -24,10 +24,10 @@
 ### API Keys
 | API | Key | Use |
 |-----|-----|-----|
-| Polygon.io | zgI7pxcaymBCYt8NsPEp35FCJvhAksXz | Bars, options, VWAP, snapshot |
-| Alpha Vantage | PXFEPVSDRGKWVSYU | RSI, MACD, CCI, ADX, ATR, EMA, STOCH, OVERVIEW |
-| Finnhub | d6r2q5pr01qgdhqcut90d6r2q5pr01qgdhqcut9g | Quotes, news, insider, earnings |
-| FRED | 1897439c3462a95e33dfa3e739f69ced | VIX, yield curve, CPI, oil, GDP, Wilshire |
+| Polygon.io | `POLYGON_KEY` | Bars, options chain, VWAP, snapshot |
+| Alpha Vantage | `AV_KEY` | RSI, MACD, CCI, ADX, ATR, EMA, STOCH, OVERVIEW |
+| Finnhub | `FINNHUB_KEY` | Quotes, news, insider sentiment, earnings |
+| FRED | `FRED_KEY` | VIX, yield curve, CPI, oil, GDP, Wilshire |
 
 ### Bot Files (GitHub)
 ```
