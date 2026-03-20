@@ -7,21 +7,27 @@ app = Flask(__name__)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 def think(prompt):
-    response = requests.post(
-        "https://api.openai.com/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
-            "Content-Type": "application/json"
-        },
-        json={
-            "model": "gpt-4o-mini",
-            "messages": [
-                {"role": "system", "content": "You are an AI brain that thinks step-by-step and helps complete tasks."},
-                {"role": "user", "content": prompt}
-            ]
-        }
-    )
-    return response.json()["choices"][0]["message"]["content"]
+    try:
+        response = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": "You are an AI brain that thinks step-by-step and helps complete tasks."},
+                    {"role": "user", "content": prompt}
+                ]
+            },
+            timeout=10
+        )
+
+        return response.json()["choices"][0]["message"]["content"]
+
+    except Exception as e:
+        return f"ERROR: {str(e)}"
 
 @app.route("/brain", methods=["POST"])
 def brain():
