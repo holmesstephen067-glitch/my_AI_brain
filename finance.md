@@ -10,16 +10,8 @@
 ### Portfolio
 | Ticker | Shares | Avg Cost | CC Contracts |
 |--------|--------|----------|--------------|
-| TSLA   | 700    | $204.68  | 7 |
-| AMD    | 400    | $129.86  | 4 |
-| NVDA   | 200    | $125.94  | 2 |
-| SOFI   | 2,000  | $21.09   | 20 |
-| AMZU   | 200    | $40.44   | 2 |
-| ROBN   | 100    | $45.00   | 1 |
-| BTC    | 0.0120392 | $92,551 | — |
-| ETH    | 0.40   | $2,829   | — |
 
-**Portfolio value:** $117,125 | **Buying power:** $24,514
+**Portfolio value:** $xxx | **Buying power:** $xxx
 
 ### API Keys
 | API | Key | Use |
@@ -45,9 +37,9 @@ trading_bot/README.md          — full documentation + roadmap
 **Rate limit:** 25 calls/day on free tier — prioritize top 3–5 tickers per scan
 
 ```python
-import requests, os
-API_KEY = "PXFEPVSDRGKWVSYU"
-BASE = "https://www.alphavantage.co/query"
+import requests
+AV_KEY = "YOUR_AV_KEY"  # loaded from Claude Project instructions
+BASE   = "https://www.alphavantage.co/query"
 
 def av(function, **params):
     r = requests.get(BASE, params={"function": function, "apikey": API_KEY, **params})
@@ -130,8 +122,8 @@ stochrsi = av("STOCHRSI", symbol="BTCUSD", interval="daily",
 
 ```python
 import requests
-FRED_KEY = "1897439c3462a95e33dfa3e739f69ced"
-BASE = "https://api.stlouisfed.org/fred"
+FRED_KEY = "YOUR_FRED_KEY"  # loaded from Claude Project instructions
+BASE     = "https://api.stlouisfed.org/fred"
 
 def fred(series_id, limit=1):
     r = requests.get(f"{BASE}/series/observations", params={
@@ -205,8 +197,8 @@ Macro regime:  [Risk-on / Neutral / Risk-off / Stagflation]
 **Key:** zgI7pxcaymBCYt8NsPEp35FCJvhAksXz
 
 ```python
-import requests
-POLY_KEY = "zgI7pxcaymBCYt8NsPEp35FCJvhAksXz"
+import requests, pandas as pd
+POLY_KEY = "YOUR_POLYGON_KEY"  # loaded from Claude Project instructions
 
 # ── HISTORICAL BARS ────────────────────────────────────────────────────────────
 def polygon_bars(ticker, days=400):
@@ -261,7 +253,7 @@ Volume/OI > 1.0 = new positions opening = smart money signal
 
 ```python
 import requests
-FH_KEY = "d6r2q5pr01qgdhqcut90d6r2q5pr01qgdhqcut9g"
+FH_KEY = "YOUR_FINNHUB_KEY"  # loaded from Claude Project instructions
 
 def finnhub(endpoint, **params):
     r = requests.get(f"https://finnhub.io/api/v1/{endpoint}",
