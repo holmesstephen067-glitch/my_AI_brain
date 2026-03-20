@@ -1,0 +1,250 @@
+# 🧠 AI_BRAIN_INDEX.md — Master Navigation for Claude
+
+> READ THIS FIRST at the start of every session.
+> This file tells you what exists in this repo, where it lives,
+> and exactly what to pull based on the task at hand.
+
+-----
+
+## What This Repo Is
+
+This is Stephen’s unified AI Brain — a living monorepo that serves as:
+
+- **Context layer** for every Claude session
+- **Trading engine** with live signals, ML, and options analysis
+- **Agent skill library** for agentic and automation tasks
+- **Dev toolkit** for ML, deployment, and MCP patterns
+- **Project source** that all future projects inherit from
+
+**Rule:** When in doubt about any project, rule, or stack decision —
+check this repo first. The answer is here.
+
+-----
+
+## Full Repo Map
+
+```
+my_AI_brain/
+│
+├── AI_BRAIN_INDEX.md        ← YOU ARE HERE — read first every session
+├── README.md                ← Repo overview and quick start
+├── .env.example             ← All required env vars (copy → .env, never commit .env)
+├── .gitignore               ← Blocks .env and secrets from git
+│
+├── core/                    ← Pull these for EVERY session
+│   ├── CONTEXT.md           ← Who Stephen is, active projects, session rules
+│   ├── PORTFOLIO.md         ← Live positions, cost basis, CC rules
+│   ├── RULES.md             ← Non-negotiable rules across all projects
+│   └── STACK.md             ← Preferred tech stack with rationale
+│
+├── trading/                 ← Pull for trading/signal/options tasks
+│   ├── signal_engine.py     ← Core: 10 indicators, XGBoost, ARIMA, TPS, Tradier CC
+│   ├── tradier_client.py    ← Real options chain fetcher
+│   ├── backtester.py        ← VectorBT strategy optimization
+│   ├── alerts.py            ← Telegram morning brief + carry monitor
+│   └── requirements.txt     ← Python dependencies
+│
+├── mcp/                     ← Pull for MCP server / Claude Desktop integration
+│   ├── brain_mcp_server.py  ← FastAPI-MCP server exposing all brain tools
+│   └── claude_desktop_config.json ← Drop into Claude Desktop to enable auto-fetch
+│
+├── agents/                  ← Pull for agentic, automation, or workflow tasks
+│   ├── agents.md            ← MCP builder, agentic loop, n8n validator, swarm
+│   └── agentic_loop/        ← Self-healing code review pipeline scripts
+│
+├── infrastructure/          ← Pull for deployment / DevOps tasks
+│   ├── docker-compose.yml   ← Full stack deploy
+│   ├── .env.example         ← Env var template
+│   └── Makefile             ← Dev shortcuts (make scan, make mcp, etc.)
+│
+├── projects/                ← Pull project-specific folder for that project's work
+│   ├── trading_dashboard/
+│   │   ├── README.md        ← Status, architecture, Tradier setup
+│   │   └── FETCH.md         ← Exact files Claude needs for this project
+│   ├── opsai/
+│   │   ├── README.md        ← Architecture, modules, pricing, build order
+│   │   └── FETCH.md         ← Exact files Claude needs for this project
+│   ├── bidshield/
+│   │   ├── README.md        ← Architecture, pipeline, build order
+│   │   └── FETCH.md         ← Exact files Claude needs for this project
+│   └── ai_brain_tool/
+│       ├── README.md        ← AI Brain Fetching Tool overview
+│       ├── 01-architecture.md
+│       ├── 02-feature-spec.md
+│       ├── 03-stack-decisions.md
+│       ├── 04-docker-compose-deploy.md
+│       └── 05-roadmap.md
+│
+├── dev.md                   ← Pull for ML/deployment tasks (Modal, Lightning, HuggingFace, FastAPI-MCP)
+├── finance.md               ← Pull for finance/trading strategy context
+└── data.md                  ← Pull for data source reference
+```
+
+-----
+
+## What to Pull — By Task Type
+
+### 📈 Trading / Signal Generation / Options
+
+```
+ALWAYS:
+  core/CONTEXT.md
+  core/PORTFOLIO.md
+  core/RULES.md
+  trading/signal_engine.py
+
+ALSO if relevant:
+  trading/backtester.py                  → backtesting a strategy
+  trading/alerts.py                      → Telegram alert setup
+  trading/tradier_client.py              → options chain questions
+  finance.md                             → strategy context
+  projects/trading_dashboard/README.md   → dashboard-specific context
+```
+
+### 🏗️ Building a New Feature / Bug Fix
+
+```
+ALWAYS:
+  core/CONTEXT.md
+  core/RULES.md
+  core/STACK.md
+  [the specific source file being modified]
+  [the project README for that project]
+
+ALSO:
+  dev.md  → if using Modal, PyTorch, HuggingFace, or FastAPI-MCP
+```
+
+### 🤖 MCP / Claude Desktop / Agentic Tasks
+
+```
+ALWAYS:
+  core/CONTEXT.md
+  mcp/brain_mcp_server.py
+  agents/agents.md
+
+ALSO:
+  dev.md                              → FastAPI-MCP patterns
+  mcp/claude_desktop_config.json      → setup reference
+```
+
+### 🚀 Deploying / DevOps / Infrastructure
+
+```
+ALWAYS:
+  core/CONTEXT.md
+  core/STACK.md
+  infrastructure/docker-compose.yml
+  infrastructure/Makefile
+
+ALSO:
+  dev.md          → Modal serverless patterns
+  .env.example    → env var reference
+```
+
+### 🏢 SaaS Project Work (OpsAI / BidShield)
+
+```
+ALWAYS:
+  core/CONTEXT.md
+  core/RULES.md
+  core/STACK.md
+  projects/{project_name}/README.md
+  projects/{project_name}/FETCH.md
+
+ALSO:
+  dev.md            → full dev toolkit
+  agents/agents.md  → if agentic features needed
+```
+
+### 🧪 ML / Model Training
+
+```
+ALWAYS:
+  core/CONTEXT.md
+  core/STACK.md
+  dev.md
+
+ALSO:
+  trading/signal_engine.py  → existing XGBoost/ARIMA patterns to build on
+```
+
+-----
+
+## Session Start Protocol
+
+### Option A — MCP Server Running (best, zero effort)
+
+Start once: `python mcp/brain_mcp_server.py`
+Configure Claude Desktop with `mcp/claude_desktop_config.json`.
+Claude auto-loads context, portfolio, and rules before every response.
+No manual fetching ever again.
+
+### Option B — Manual Fetch (no MCP)
+
+Paste at the start of every session:
+
+```
+Please fetch and read these files before we begin:
+https://raw.githubusercontent.com/holmesstephen067-glitch/my_AI_brain/main/AI_BRAIN_INDEX.md
+https://raw.githubusercontent.com/holmesstephen067-glitch/my_AI_brain/main/core/CONTEXT.md
+https://raw.githubusercontent.com/holmesstephen067-glitch/my_AI_brain/main/core/PORTFOLIO.md
+
+Then fetch any additional files listed under the relevant task type above.
+```
+
+### Option C — Project-Specific Fetch
+
+Each project folder has a FETCH.md with copy-paste ready URLs.
+Open the relevant FETCH.md and paste its contents at session start.
+
+-----
+
+## Active Projects — Current Status
+
+|Project               |Status                      |Primary Files                   |
+|----------------------|----------------------------|--------------------------------|
+|Trading Dashboard     |🟡 Active — Phase 2 (Tradier)|`trading/*`, `core/PORTFOLIO.md`|
+|AI Brain Fetching Tool|🟡 Designing                 |`projects/ai_brain_tool/*`      |
+|OpsAI                 |🔵 Planned                   |`projects/opsai/*`, `core/*`    |
+|BidShield AI          |🔵 Planned                   |`projects/bidshield/*`, `core/*`|
+
+-----
+
+## Key Rules Claude Must Always Enforce
+
+Pulled from `core/RULES.md` — these apply without being asked:
+
+1. **Never sell covered calls below cost basis** — hard rule, no exceptions
+1. **Zero hardcoded secrets** — API keys in `.env` only, never in source files
+1. **No lookahead bias in ML** — TimeSeriesSplit only, never shuffle financial data
+1. **MCP-first design** — every personal tool gets an MCP interface
+1. **Phase gates** — don’t build Phase N+1 before Phase N is deployed and used
+1. **Single source of truth** — portfolio state and rules live in `core/` only
+
+-----
+
+## How to Add a New Project to This Brain
+
+1. Create `projects/{project_name}/` folder
+1. Create `projects/{project_name}/README.md` — what it is, architecture, status
+1. Create `projects/{project_name}/FETCH.md` — which brain files it needs
+1. Add a row to the Active Projects table above
+1. Add the folder to the Repo Map above
+1. Update `core/CONTEXT.md` Active Projects section
+
+New project automatically inherits `core/RULES.md` and `core/STACK.md`.
+No duplication. No drift.
+
+-----
+
+## Changelog
+
+|Date      |Change                                            |
+|----------|--------------------------------------------------|
+|2026-03-20|v2.0 — restructured as project source brain       |
+|2026-03-20|Security: API keys moved to .env, old keys rotated|
+|2026-03-20|Added Tradier real options chain integration      |
+|2026-03-20|Added MCP server (brain_mcp_server.py)            |
+|2026-03-20|Added projects: OpsAI, BidShield, AI Brain Tool   |
+|2026-01-20|v1.0 — initial trading bot with XGBoost + ARIMA   |
