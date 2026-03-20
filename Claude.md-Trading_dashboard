@@ -1,0 +1,216 @@
+# CLAUDE.md — Trading Dashboard
+
+> This file is the persistent context for Claude Code sessions on the **Trading Dashboard** project.
+> It is project-specific. Do not apply conventions from this file to other projects (e.g., OpsAI, BidShield AI).
+
+-----
+
+## Project Identity
+
+**Trading Dashboard** is a personal trading and options analysis tool built to support Stephen’s covered call, wheel strategy, and broader equity/options workflow. It surfaces real-time stock data, options chains, and rule-based filters to identify actionable trades without manual screening.
+
+- **Stage:** Active development
+- **Owner:** Stephen (personal use)
+- **Primary use case:** Covered call candidate filtering, options chain analysis, wheel strategy execution support
+
+-----
+
+## Tech Stack
+
+|Layer       |Technology                                    |
+|------------|----------------------------------------------|
+|Frontend    |React (TypeScript)                            |
+|Backend     |FastAPI (Python)                              |
+|Stock Data  |Tiingo API (IEX endpoint — live prices)       |
+|Options Data|Tradier API (real-time options chains)        |
+|Database    |PostgreSQL (positions, trade log, rules)      |
+|Auth        |Simple JWT (personal tool — no multi-user)    |
+|Hosting     |Local / lightweight cloud (not enterprise AWS)|
+
+-----
+
+## Repo Structure
+
+```
+trading-dashboard/
+├── backend/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── stocks.py        # Tiingo price endpoints
+│   │   │   ├── options.py       # Tradier options chain endpoints
+│   │   │   └── positions.py     # Portfolio position management
+│   │   ├── core/
+│   │   │   ├── config.py
+│   │   │   └── trading_rules.py # Rule engine — covered call filters
+│   │   ├── models/              # SQLAlchemy models
+│   │   ├── schemas/             # Pydantic schemas
+│   │   └── services/
+│   │       ├── tiingo_service.py    # Tiingo API client
+│   │       ├── tradier_service.py   # Tradier API client
+│   │       └── screening_service.py # Rule-based candidate filtering
+│   └── tests/
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Dashboard/
+│   │   │   ├── OptionsChain/
+│   │   │   └── Positions/
+│   │   ├── pages/
+│   │   ├── hooks/
+│   │   └── api/
+├── docs/
+└── CLAUDE.md           # This file
+```
+
+-----
+
+## API Integrations
+
+### Tiingo (Live Stock Prices)
+
+- Endpoint: IEX real-time feed
+- Used for: Live price quotes on screened tickers
+- Client: `backend/app/services/tiingo_service.py`
+- Docs: https://api.tiingo.com/documentation/iex
+
+### Tradier (Options Chains)
+
+- Used for: Real-time options chain data for covered call candidate analysis
+- Client: `backend/app/services/tradier_service.py`
+- Required: Tradier account + API token (sandbox and production tokens are different)
+- Sandbox base URL: `https://sandbox.tradier.com/v1/`
+- Production base URL: `https://api.tradier.com/v1/`
+- Key endpoints:
+  - `GET /markets/quotes` — live quotes
+  - `GET /markets/options/chains` — full options chain by expiration
+  - `GET /markets/options/expirations` — available expiration dates
+
+-----
+
+## Trading Rules Engine
+
+All covered call filtering logic lives in `backend/app/core/trading_rules.py`.
+
+### Covered Call Candidate Rules
+
+A ticker qualifies as a covered call candidate if ALL of the following are true:
+
+|Rule                 |Condition                                                  |
+|---------------------|-----------------------------------------------------------|
+|Green day            |Stock price > previous close                               |
+|Minimum move         |Price up ≥ 0.8% on the day                                 |
+|Profit target        |Target 80% of max premium (close at 20% of credit received)|
+|Cost basis protection|Never sell a call below the position’s average cost basis  |
+
+### Position Reference
+
+|Ticker|Shares|Avg Cost|Notes                              |
+|------|------|--------|-----------------------------------|
+|SOFI  |2,000 |$21.10  |Primary wheel/covered call position|
+|NVDA  |200   |$126.00 |                                   |
+|AMD   |400   |$140.00 |                                   |
+|PSI   |100   |$95.00  |Covered put                        |
+|AMZN  |200   |$41.00  |                                   |
+|HOOD  |100   |$45.00  |                                   |
+
+
+> **Important:** The cost basis table above is the source of truth for the “never sell below cost basis” rule. Always load from the `positions` DB table at runtime — do not hardcode in rule logic.
+
+### Options Positions
+
+|Position           |Details                                                                                           |
+|-------------------|--------------------------------------------------------------------------------------------------|
+|PLTR $130 LEAP Call|Expiry: 1/21/2028 · Purchased: 1/20/2026 · Premium paid: ~$76/shr ($7,600 total) · Breakeven: $206|
+
+-----
+
+## Screening Service Logic
+
+`screening_service.py` should:
+
+1. Pull live prices from Tiingo for all tracked tickers
+1. Apply covered call rules (green day, ≥0.8% move)
+1. For qualifying tickers, fetch options chain from Tradier
+1. Filter options by:
+- Strike ≥ average cost basis for the position
+- Return on premium meeting minimum threshold
+1. Return ranked list of candidates with strike, expiry, bid/ask, delta, and implied return
+
+-----
+
+## Naming Conventions
+
+- Python: `snake_case` variables/functions/files; `PascalCase` classes
+- TypeScript/React: `camelCase` variables/functions; `PascalCase` components; `kebab-case` filenames
+- API routes: `/api/v1/stocks`, `/api/v1/options`, `/api/v1/positions`
+- DB tables: `positions`, `trade_log`, `screening_results`
+- Env vars: `SCREAMING_SNAKE_CASE`
+
+-----
+
+## Environment Variables (never hardcode)
+
+```
+# Data APIs
+TIINGO_API_KEY
+TRADIER_API_TOKEN
+TRADIER_ENV=sandbox|production
+
+# Database
+DATABASE_URL
+
+# App
+ENVIRONMENT=development|production
+```
+
+-----
+
+## Key Business Rules
+
+- **Never sell a covered call below cost basis** — always check `positions.avg_cost` before surfacing a strike as a candidate
+- **80% profit target** — dashboard should flag open covered calls when they’ve decayed to 20% of original premium
+- **Green day + 0.8% filter** — only surface candidates on qualifying up days; do not show all tickers every day
+- **Tradier sandbox vs. production** — use sandbox for all development; only switch to production token for live trading use
+- **Positions table is the source of truth** — never hardcode share counts or cost basis in application logic
+
+-----
+
+## Current Work-in-Progress
+
+- [ ] Tradier API client (`tradier_service.py`) — account setup + token confirmed as next step
+- [ ] Options chain endpoint (`/api/v1/options/chains`)
+- [ ] Covered call candidate screening pipeline
+- [ ] Frontend options chain display component
+- [ ] 80% profit target alert/flag on open positions
+
+Update this section at the start of each session.
+
+-----
+
+## Testing Standards
+
+- Backend: `pytest` with `httpx` async test client
+- Mock Tiingo and Tradier API responses in all tests — never hit live APIs in CI
+- Rule engine tests must cover: green day pass/fail, cost basis guard, 0.8% threshold edge cases
+- Frontend: `Vitest` + `React Testing Library`
+
+-----
+
+## Claude Code Session Protocol
+
+1. **Read this file first** at the start of every session
+1. **Update WIP section** when tasks complete or new ones are added
+1. **Work in feature branches** — never commit to `main` directly
+1. **Tradier sandbox only** during development — confirm with Stephen before switching to production token
+1. **Never hardcode positions or cost basis** — always read from DB
+
+-----
+
+## Out of Scope for This Repo
+
+This repo is the **Trading Dashboard** only. The following are separate projects:
+
+- `OpsAI` — AI-powered SMB operations platform
+- `BidShield AI` — proposal-to-contract tool for contractors
+
+Do not cross-reference or apply patterns from those projects here unless explicitly told to.
