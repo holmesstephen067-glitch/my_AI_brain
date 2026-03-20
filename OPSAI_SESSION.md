@@ -141,13 +141,34 @@ CODING RULES
 ════════════════════════════════
 BUILD STATE
 ════════════════════════════════
-✅ Step 1 — React shell (AppShell, Sidebar, TopNav, Dashboard, KPIs, AI insights, sparkline, tax gauge, integration badges, onboarding banner)
-⬜ Step 2 — Adaptive onboarding (3 questions → personalized dashboard)
-⬜ Step 3 — Cognito Gen2 auth (signup, login, MFA, RBAC)
-⬜ Step 4 — PostgreSQL schema + pgvector
-⬜ Step 5 — Invoicing module (create, send, track)
-⬜ Step 6 — Stripe payments (invoice payment links, subscriptions, webhooks)
-⬜ Step 7 — AI Receipt Scanner (Claude Vision + LangGraph Ingestion)
-⬜ Step 8 — Bookkeeping lite + Plaid bank sync
-⬜ Step 9 — Tax Readiness Meter
+MVP
+✅ Step 1  — React shell (AppShell, Sidebar, TopNav, Dashboard, KPIs, AI insights, sparkline, tax gauge, integration badges, onboarding banner)
+⬜ Step 2  — Adaptive onboarding (3 questions → personalized dashboard)
+⬜ Step 3  — Cognito Gen2 auth (signup, login, MFA, RBAC)
+⬜ Step 4  — PostgreSQL schema + pgvector
+⬜ Step 5  — Invoicing module (create, send, track, Documenso e-sign)
+⬜ Step 6  — Stripe payments (invoice links, subscriptions, webhooks)
+⬜ Step 7  — AI Receipt Scanner (Claude Vision + LangGraph Ingestion)
+⬜ Step 8  — Bookkeeping lite + Plaid bank sync
+⬜ Step 9  — Tax Readiness Meter
 ⬜ Step 10 — Executive Summary PDF (WeasyPrint)
+
+PHASE 2
+⬜ Merge.dev integrations (QuickBooks, ADP, Outlook, Gmail, Google Calendar)
+⬜ Accountant API (OAuth 2.0, read-only, rate-limited, audit logged)
+⬜ Superset embedded analytics (Growth tier)
+⬜ CRM module
+⬜ PowerPoint generation (Presenton + Claude)
+⬜ Pitch deck generator (Claude 8-slide structure)
+
+PHASE 3
+⬜ HR module (onboarding, PTO, org chart, performance reviews, compliance alerts)
+⬜ Plane project management (Kanban, job costing, time tracking, client portal)
+⬜ Mobile field app (React Native — clock in/out, receipt snap, job status)
+⬜ Multi-location + multi-entity with master dashboard rollup
+⬜ KPI dashboards + OKR tracking
+⬜ Vendor + contract management (Claude extracts key dates, auto-reminders)
+⬜ Client health scoring (payment patterns, communication, job history)
+⬜ ESG + compliance reporting
+⬜ Employee training + certification tracker
+⬜ White-label + SOC 2 + SLA (Enterprise)
