@@ -1,42 +1,49 @@
-# ─────────────────────────────────────────────────────────
-# TRADING BOT — Python Dependencies
-# Install with: pip install -r requirements.txt
-# ─────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
 
-# ── Core Data ─────────────────────────────────────────────
-pandas>=2.0.0
-numpy>=1.24.0
-requests>=2.28.0
+# AI Brain Trading Engine — Python Dependencies
 
-# ── Technical Indicators ──────────────────────────────────
-pandas-ta>=0.3.14b
+# Install: pip install -r requirements.txt
 
-# ── Machine Learning ──────────────────────────────────────
-xgboost>=1.7.0
-scikit-learn>=1.2.0
+# ─────────────────────────────────────────────────────────────────
 
-# ── Time Series / Stats ───────────────────────────────────
-statsmodels>=0.14.0
+# ── Core ─────────────────────────────────────────────────────────
 
-# ── Backtesting ───────────────────────────────────────────
-vectorbt>=0.25.0
-backtrader>=1.9.78
+python-dotenv>=1.0.0     # REQUIRED: .env loading (replaces hardcoded keys)
+requests>=2.31.0
+numpy>=1.26.0
+pandas>=2.1.0
 
-# ── Options Pricing ───────────────────────────────────────
-# QuantLib (install separately if needed):
-# pip install QuantLib-Python
+# ── Technical Indicators ─────────────────────────────────────────
 
-# ── Portfolio Analytics ───────────────────────────────────
-pyfolio-reloaded>=0.9.5
+pandas-ta>=0.3.14b0      # All 10 indicators (RSI, MACD, BB, Stoch, CCI, ADX, ATR, EMA, Volume)
 
-# ── Alerts (optional) ─────────────────────────────────────
-python-telegram-bot>=20.0
+# ── ML ────────────────────────────────────────────────────────────
 
-# ── Scheduling ────────────────────────────────────────────
-schedule>=1.2.0
+xgboost>=2.0.0
+scikit-learn>=1.4.0
+statsmodels>=0.14.0      # ARIMA forecasting
 
-# ── Broker APIs (install whichever you use) ───────────────
-# alpaca-trade-api>=3.0.0       # stocks + options
-# python-binance>=1.0.19        # crypto
-# oandapyV20>=0.7.2             # forex
-# ib_insync>=0.9.86             # futures (IBKR)
+# ── Backtesting ───────────────────────────────────────────────────
+
+vectorbt>=0.26.2          # Strategy optimization
+
+# ── MCP Server ───────────────────────────────────────────────────
+
+fastapi>=0.111.0
+fastapi-mcp>=0.1.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.6.0
+
+# ── Future (Phase 2 ML) ───────────────────────────────────────────
+
+# tensorflow>=2.16.0     # LSTM sequence models
+
+# torch>=2.2.0           # PyTorch (via Modal for GPU)
+
+# transformers>=4.40.0   # HuggingFace
+
+# quantlib-python        # Precise options pricing
+
+# pyfolio-reloaded       # Portfolio analytics
+
+# backtrader             # Live trading simulation
