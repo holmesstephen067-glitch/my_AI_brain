@@ -1,0 +1,92 @@
+# HOW TO UPLOAD THE TRADING BOT TO YOUR GITHUB REPO
+# =====================================================
+# Your existing repo: holmesstephen067-glitch/my_AI_brain
+# You already have finance.md, dev.md, data.md, agents.md there
+# We're adding a trading_bot/ folder
+
+# ─────────────────────────────────────────────────────────
+# OPTION A — GitHub Desktop (Easiest, No Command Line)
+# ─────────────────────────────────────────────────────────
+
+1. Download GitHub Desktop: https://desktop.github.com/
+2. Clone your repo: File → Clone Repository → holmesstephen067-glitch/my_AI_brain
+3. Create folder called "trading_bot" inside the cloned repo folder
+4. Copy these 4 files into it:
+     signal_engine.py
+     backtester.py
+     alerts.py
+     requirements.txt
+     README.md
+5. In GitHub Desktop: you'll see all 5 files listed as "changes"
+6. Bottom left: add commit message "Add trading bot signal engine v1.0"
+7. Click "Commit to main"
+8. Click "Push origin" (top right)
+9. Done — files are live on GitHub
+
+# ─────────────────────────────────────────────────────────
+# OPTION B — Command Line (if you have Git installed)
+# ─────────────────────────────────────────────────────────
+
+# Clone your repo
+git clone https://github.com/holmesstephen067-glitch/my_AI_brain.git
+cd my_AI_brain
+
+# Create the trading_bot folder and add files
+mkdir trading_bot
+# Copy the 5 files into trading_bot/
+
+# Stage, commit, push
+git add trading_bot/
+git commit -m "Add trading bot signal engine v1.0"
+git push origin main
+
+# ─────────────────────────────────────────────────────────
+# OPTION C — GitHub Web UI (No Software Needed)
+# ─────────────────────────────────────────────────────────
+
+1. Go to: https://github.com/holmesstephen067-glitch/my_AI_brain
+2. Click "Add file" → "Create new file"
+3. In the filename box type: trading_bot/signal_engine.py
+   (typing the slash automatically creates the folder)
+4. Paste the contents of signal_engine.py
+5. Click "Commit new file"
+6. Repeat for backtester.py, alerts.py, requirements.txt, README.md
+
+# ─────────────────────────────────────────────────────────
+# AFTER UPLOAD — UPDATE YOUR PROJECT INSTRUCTIONS
+# ─────────────────────────────────────────────────────────
+# Add these URLs to the "At the start of every conversation" 
+# section in your Claude Project instructions:
+
+# For the signal engine logic:
+# https://raw.githubusercontent.com/holmesstephen067-glitch/my_AI_brain/refs/heads/main/trading_bot/signal_engine.py
+
+# For the README / system overview:  
+# https://raw.githubusercontent.com/holmesstephen067-glitch/my_AI_brain/refs/heads/main/trading_bot/README.md
+
+# Claude will fetch these at the start of each session, keeping
+# the full system logic in context without token overhead.
+
+# ─────────────────────────────────────────────────────────
+# RUNNING THE BOT LOCALLY
+# ─────────────────────────────────────────────────────────
+
+# Install dependencies (one time):
+pip install -r requirements.txt
+
+# Run a full scan right now:
+python signal_engine.py
+
+# Save results to JSON:
+python signal_engine.py --save
+
+# Optimize RSI thresholds for TSLA:
+python backtester.py TSLA
+
+# Test Telegram (after setting up bot token):
+export TELEGRAM_TOKEN=your_token_here
+export TELEGRAM_CHAT_ID=your_chat_id_here
+python alerts.py test
+
+# Start daily morning briefs:
+python alerts.py
