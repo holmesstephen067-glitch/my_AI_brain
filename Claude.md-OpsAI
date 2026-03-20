@@ -1,0 +1,166 @@
+# CLAUDE.md — OpsAI
+
+> This file is the persistent context for Claude Code sessions on the **OpsAI** project.
+> It is project-specific. Do not apply conventions from this file to other projects (e.g., BidShield AI, trading dashboard).
+
+-----
+
+## Project Identity
+
+**OpsAI** is an AI-powered business operations platform for small-to-mid-market businesses (contractors, restaurants, retail). It combines bookkeeping, AI receipt scanning, supply reorder intelligence, HR, project management, and KPI dashboards into a single adaptive platform.
+
+- **Stage:** Active development
+- **Owner:** Stephen
+- **Hosting:** AWS
+- **Repo structure:** Mono-repo
+
+-----
+
+## Tech Stack
+
+|Layer             |Technology                                                                 |
+|------------------|---------------------------------------------------------------------------|
+|Backend           |FastAPI (Python)                                                           |
+|Frontend          |React (TypeScript)                                                         |
+|Mobile            |React Native                                                               |
+|Database          |PostgreSQL (RDS)                                                           |
+|Auth              |AWS Cognito                                                                |
+|Storage           |AWS S3                                                                     |
+|Infra             |AWS (ECS / EC2 / RDS / S3 / Cognito)                                       |
+|Integrations      |Merge.dev (HR, accounting, ERP connectors)                                 |
+|Project Management|Plane (self-hosted or cloud)                                               |
+|AI/ML             |Anthropic Claude API (receipt scanning, reorder intelligence, KPI insights)|
+|Receipts/OCR      |AWS Textract                                                               |
+
+-----
+
+## Mono-Repo Structure
+
+```
+opsai/
+├── backend/          # FastAPI app
+│   ├── app/
+│   │   ├── api/      # Route handlers
+│   │   ├── core/     # Config, auth, middleware
+│   │   ├── models/   # SQLAlchemy models
+│   │   ├── schemas/  # Pydantic schemas
+│   │   └── services/ # Business logic layer
+│   └── tests/
+├── frontend/         # React (TypeScript) web app
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── hooks/
+│   │   ├── store/    # State management
+│   │   └── api/      # API client layer
+│   └── public/
+├── mobile/           # React Native app
+│   ├── src/
+│   │   ├── screens/
+│   │   ├── components/
+│   │   └── navigation/
+├── infra/            # AWS CDK or Terraform configs
+├── docs/             # Architecture decisions, API contracts
+└── CLAUDE.md         # This file
+```
+
+-----
+
+## Architecture Decisions
+
+- **Mono-repo** — all services in one repo for easier cross-layer refactoring
+- **FastAPI over Django** — lighter weight, async-native, better for AI service integration
+- **Merge.dev for integrations** — unified API for third-party HR/accounting connectors; do not build direct integrations unless Merge doesn’t support the target
+- **Plane for project management** — embedded via iframe or API, not rebuilt from scratch
+- **Claude API for AI features** — receipt scanning, supply reorder suggestions, natural language KPI queries; always route AI calls through `backend/app/services/ai_service.py`
+- **AWS Textract** — primary OCR for receipt ingestion; Claude handles extraction/structuring post-OCR
+- **Tiered pricing model** — Starter / Growth / Scale; feature flags control tier access
+
+-----
+
+## Naming Conventions
+
+- Python: `snake_case` for variables, functions, files; `PascalCase` for classes
+- TypeScript/React: `camelCase` for variables/functions; `PascalCase` for components; `kebab-case` for file names
+- API routes: RESTful, plural nouns — `/api/v1/receipts`, `/api/v1/suppliers`
+- Database tables: `snake_case`, plural — `receipt_scans`, `reorder_events`
+- Environment variables: `SCREAMING_SNAKE_CASE` — `ANTHROPIC_API_KEY`, `MERGE_API_KEY`
+
+-----
+
+## Environment Variables (never hardcode)
+
+```
+# AWS
+AWS_REGION
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+S3_BUCKET_NAME
+COGNITO_USER_POOL_ID
+COGNITO_CLIENT_ID
+
+# Database
+DATABASE_URL
+
+# Third-party
+ANTHROPIC_API_KEY
+MERGE_API_KEY
+PLANE_API_KEY
+
+# App
+ENVIRONMENT=development|staging|production
+```
+
+-----
+
+## Key Business Rules
+
+- **Receipt scanning flow:** Upload to S3 → Textract OCR → Claude extraction → structured JSON → stored in `receipt_scans` table
+- **Supply reorder logic:** Triggered when inventory drops below threshold; Claude generates reorder suggestions based on historical usage
+- **Adaptive onboarding:** First-login flow adapts to business type (contractor vs. restaurant vs. retail); stored in `business_profile` table
+- **KPI dashboards:** Configurable per business type; data pulled from internal DB + Merge.dev connectors
+- **Feature flags:** Tier-gated features checked via `core/permissions.py` — never hardcode tier logic in route handlers
+
+-----
+
+## Current Work-in-Progress
+
+- [ ] Merge.dev integration scaffolding
+- [ ] Receipt scanning pipeline (S3 → Textract → Claude)
+- [ ] Adaptive onboarding flow (backend schema + frontend wizard)
+- [ ] KPI dashboard component library
+- [ ] React Native mobile app — field receipt capture
+
+Update this section at the start of each session.
+
+-----
+
+## Testing Standards
+
+- Backend: `pytest` with `httpx` async test client
+- Frontend: `Vitest` + `React Testing Library`
+- Mobile: `Jest` + `Detox` for E2E
+- Minimum coverage target: 70% on services layer
+- All new API endpoints require at least one happy-path and one error-path test
+
+-----
+
+## Claude Code Session Protocol
+
+1. **Read this file first** at the start of every session
+1. **Update WIP section** if tasks are completed or new ones added
+1. **Work in feature branches** — never commit directly to `main`
+1. **Scope changes per session** — one module or feature at a time
+1. **Do not modify infra files** without explicit instruction from Stephen
+1. **Reference `docs/` for architecture decisions** before proposing structural changes
+
+-----
+
+## Out of Scope for This Repo
+
+This repo is **OpsAI only**. The following are separate projects with their own repos and CLAUDE.md files:
+
+- `BidShield AI` — proposal-to-contract tool for contractors
+- `Trading Dashboard` — personal trading/options dashboard (Tiingo, Tradier, covered call logic)
+
+Do not cross-reference or apply patterns from those projects here unless explicitly told to.
