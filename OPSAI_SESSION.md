@@ -145,7 +145,7 @@ MVP
 ✅ Step 1  — React shell (AppShell, Sidebar, TopNav, Dashboard, KPIs, AI insights, sparkline, tax gauge, integration badges, onboarding banner)
 ✅ Step 2  — Adaptive onboarding (3 questions → personalized dashboard)
 ✅ Step 3  — Cognito Gen2 auth (signup, login, MFA, RBAC)
-⬜ Step 4  — PostgreSQL schema + pgvector
+✅ Step 4  — PostgreSQL schema + pgvector
 ⬜ Step 5  — Invoicing module (create, send, track, Documenso e-sign)
 ⬜ Step 6  — Stripe payments (invoice links, subscriptions, webhooks)
 ⬜ Step 7  — AI Receipt Scanner (Claude Vision + LangGraph Ingestion)
