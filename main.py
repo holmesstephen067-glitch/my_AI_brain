@@ -5,10 +5,10 @@ import sqlite3
 
 app = Flask(__name__)
 
-# 🔐 Load API Key
+# 🔐 API Key
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-# 🧠 Setup SQLite Memory
+# 🧠 Database Setup
 conn = sqlite3.connect("memory.db", check_same_thread=False)
 c = conn.cursor()
 
@@ -26,36 +26,42 @@ def save_memory(goal, response):
     c.execute("INSERT INTO memory (goal, response) VALUES (?, ?)", (goal, response))
     conn.commit()
 
-# 🔍 Get Recent Memory
+# 🔍 Get Memory
 def get_memory():
     c.execute("SELECT goal, response FROM memory ORDER BY id DESC LIMIT 5")
     return c.fetchall()
 
-# 🧠 AI Thinking Function
-def think(prompt):
+# 🧰 Simple Tools (expand later)
+def use_tools(text):
+    if "calculate" in text.lower():
+        try:
+            expression = text.lower().split("calculate")[-1].strip()
+            return f"Calculation result: {eval(expression)}"
+        except:
+            return "Could not calculate"
+    return None
+
+# 🧠 AI Brain (Agent Loop)
+def think(goal):
     memory = get_memory()
 
     memory_text = "\n".join(
         [f"Goal: {m[0]} | Result: {m[1]}" for m in memory]
     )
 
-    full_prompt = f"""
-You are an AI brain that remembers past tasks and improves over time.
-
-Previous memory:
-{memory_text}
-
-Current goal:
-{prompt}
-
-Respond clearly and helpfully.
-"""
-
     if not OPENAI_API_KEY:
         return "ERROR: Missing OPENAI_API_KEY"
 
     try:
-        response = requests.post(
+        # 🧠 PLAN
+        plan_prompt = f"""
+Break this goal into step-by-step actions.
+
+Goal:
+{goal}
+"""
+
+        plan_response = requests.post(
             "https://api.openai.com/v1/chat/completions",
             headers={
                 "Authorization": f"Bearer {OPENAI_API_KEY}",
@@ -64,24 +70,58 @@ Respond clearly and helpfully.
             json={
                 "model": "gpt-4o-mini",
                 "messages": [
-                    {"role": "system", "content": "You are an intelligent AI brain."},
-                    {"role": "user", "content": full_prompt}
+                    {"role": "system", "content": "You are a planning AI."},
+                    {"role": "user", "content": plan_prompt}
                 ]
             },
             timeout=15
         )
 
-        data = response.json()
+        plan = plan_response.json()["choices"][0]["message"]["content"]
 
-        if "choices" not in data:
-            return f"ERROR: {data}"
+        # 🧠 EXECUTE
+        execute_prompt = f"""
+Use this plan and memory to complete the goal.
 
-        return data["choices"][0]["message"]["content"]
+Previous memory:
+{memory_text}
+
+Plan:
+{plan}
+
+Goal:
+{goal}
+"""
+
+        execute_response = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": "You execute plans and produce results."},
+                    {"role": "user", "content": execute_prompt}
+                ]
+            },
+            timeout=15
+        )
+
+        result = execute_response.json()["choices"][0]["message"]["content"]
+
+        # 🧰 TOOL CHECK
+        tool_result = use_tools(goal)
+        if tool_result:
+            result += f"\n\n[Tool Used]: {tool_result}"
+
+        return f"PLAN:\n{plan}\n\nRESULT:\n{result}"
 
     except Exception as e:
         return f"ERROR: {str(e)}"
 
-# 🚀 Main Brain Endpoint
+# 🚀 Main API
 @app.route("/brain", methods=["POST"])
 def brain():
     data = request.json
@@ -93,7 +133,13 @@ def brain():
 
     return jsonify({"result": result})
 
-# 🌐 Health Check
+# 🌐 Simple Browser Test (NO POST NEEDED)
+@app.route("/test")
+def test():
+    result = think("Give me a business idea I can start with $100")
+    return result
+
+# 🟢 Health Check
 @app.route("/")
 def home():
-    return "AI Brain with Memory is running"
+    return "AI Brain (Agent + Memory + Tools) is running"
