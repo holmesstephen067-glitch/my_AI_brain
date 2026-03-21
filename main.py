@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import requests
 import os
 import sqlite3
@@ -317,8 +317,8 @@ def brain():
 
 
 @app.route("/")
-def home():
-    return "🚀 SaaS AI Brain Running"
+def serve_ui():
+    return send_from_directory("static", "index.html")
 
 
 # =========================
