@@ -1,5 +1,14 @@
+from flask import Flask, request, jsonify
+import requests
+import os
 import sqlite3
 
+app = Flask(__name__)
+
+# 🔐 Load API Key
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+
+# 🧠 Setup SQLite Memory
 conn = sqlite3.connect("memory.db", check_same_thread=False)
 c = conn.cursor()
 
@@ -12,15 +21,39 @@ CREATE TABLE IF NOT EXISTS memory (
 """)
 conn.commit()
 
-from flask import Flask, request, jsonify
-import requests
-import os
+# 💾 Save Memory
+def save_memory(goal, response):
+    c.execute("INSERT INTO memory (goal, response) VALUES (?, ?)", (goal, response))
+    conn.commit()
 
-app = Flask(__name__)
+# 🔍 Get Recent Memory
+def get_memory():
+    c.execute("SELECT goal, response FROM memory ORDER BY id DESC LIMIT 5")
+    return c.fetchall()
 
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-
+# 🧠 AI Thinking Function
 def think(prompt):
+    memory = get_memory()
+
+    memory_text = "\n".join(
+        [f"Goal: {m[0]} | Result: {m[1]}" for m in memory]
+    )
+
+    full_prompt = f"""
+You are an AI brain that remembers past tasks and improves over time.
+
+Previous memory:
+{memory_text}
+
+Current goal:
+{prompt}
+
+Respond clearly and helpfully.
+"""
+
+    if not OPENAI_API_KEY:
+        return "ERROR: Missing OPENAI_API_KEY"
+
     try:
         response = requests.post(
             "https://api.openai.com/v1/chat/completions",
@@ -31,18 +64,24 @@ def think(prompt):
             json={
                 "model": "gpt-4o-mini",
                 "messages": [
-                    {"role": "system", "content": "You are an AI brain that thinks step-by-step and helps complete tasks."},
-                    {"role": "user", "content": prompt}
+                    {"role": "system", "content": "You are an intelligent AI brain."},
+                    {"role": "user", "content": full_prompt}
                 ]
             },
-            timeout=10
+            timeout=15
         )
 
-        return response.json()["choices"][0]["message"]["content"]
+        data = response.json()
+
+        if "choices" not in data:
+            return f"ERROR: {data}"
+
+        return data["choices"][0]["message"]["content"]
 
     except Exception as e:
         return f"ERROR: {str(e)}"
 
+# 🚀 Main Brain Endpoint
 @app.route("/brain", methods=["POST"])
 def brain():
     data = request.json
@@ -50,8 +89,11 @@ def brain():
 
     result = think(goal)
 
+    save_memory(goal, result)
+
     return jsonify({"result": result})
 
+# 🌐 Health Check
 @app.route("/")
 def home():
-    return "AI Brain is running"
+    return "AI Brain with Memory is running"
