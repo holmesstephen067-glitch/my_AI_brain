@@ -5,6 +5,7 @@ import sqlite3
 import json
 import re
 from datetime import datetime
+import hashlib
 
 app = Flask(__name__)
 
@@ -17,36 +18,88 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 # =========================
 # 🧠 DATABASE
 # =========================
-conn = sqlite3.connect("memory.db", check_same_thread=False)
+conn = sqlite3.connect("app.db", check_same_thread=False)
 c = conn.cursor()
 
+# Users table (basic auth system)
+c.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE,
+    password TEXT
+)
+""")
+
+# Memory tied to users
 c.execute("""
 CREATE TABLE IF NOT EXISTS memory (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
     goal TEXT,
     response TEXT
 )
 """)
+
 conn.commit()
 
 # =========================
-# 💾 MEMORY
+# 🔐 SIMPLE AUTH (MINIMAL)
 # =========================
-def save_memory(goal, response):
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def create_user(email, password):
+    try:
+        c.execute(
+            "INSERT INTO users (email, password) VALUES (?, ?)",
+            (email, hash_password(password))
+        )
+        conn.commit()
+        return True
+    except:
+        return False
+
+
+def authenticate_user(email, password):
+    c.execute("SELECT id, password FROM users WHERE email = ?", (email,))
+    user = c.fetchone()
+
+    if not user:
+        return None
+
+    user_id, stored_password = user
+
+    if hash_password(password) == stored_password:
+        return user_id
+
+    return None
+
+
+# =========================
+# 💾 MEMORY (USER-BASED)
+# =========================
+def save_memory(user_id, goal, response):
     c.execute(
-        "INSERT INTO memory (goal, response) VALUES (?, ?)",
-        (goal, response)
+        "INSERT INTO memory (user_id, goal, response) VALUES (?, ?, ?)",
+        (user_id, goal, response)
     )
     conn.commit()
 
 
-def get_memory():
-    c.execute("SELECT goal, response FROM memory ORDER BY id DESC LIMIT 10")
+def get_memory(user_id):
+    c.execute(
+        "SELECT goal, response FROM memory WHERE user_id = ? ORDER BY id DESC LIMIT 10",
+        (user_id,)
+    )
     return c.fetchall()
 
 
-def get_relevant_memory(goal):
-    memory = get_memory()
+# =========================
+# 🧠 MEMORY RELEVANCE
+# =========================
+def get_relevant_memory(goal, user_id):
+    memory = get_memory(user_id)
     goal_words = set(goal.lower().split())
 
     scored = []
@@ -80,22 +133,14 @@ def get_time():
     return datetime.now().isoformat()
 
 
-def echo(text):
-    return text
-
-
-# =========================
-# 🧰 TOOL REGISTRY
-# =========================
 TOOLS = {
     "calculate": safe_calculate,
-    "time": get_time,
-    "echo": echo
+    "time": get_time
 }
 
 
 # =========================
-# 🧠 TOOL EXECUTION
+# 🧰 TOOL EXECUTION
 # =========================
 def run_tool(tool_name, tool_input):
     if tool_name in TOOLS:
@@ -106,7 +151,6 @@ def run_tool(tool_name, tool_input):
 # =========================
 # 🔥 LLM CALLS
 # =========================
-
 def call_openai(messages):
     if not OPENAI_API_KEY:
         return None
@@ -165,80 +209,21 @@ def call_gemini(prompt):
 # =========================
 def call_llm(messages, prompt_text):
     response = call_openai(messages)
-
     if response:
         return response
 
     response = call_gemini(prompt_text)
-
     if response:
         return response
 
-    return "No LLM available. Please check API keys."
+    return "No LLM available."
 
 
 # =========================
-# 🧠 FUNCTION CALLING (NEXT-GEN)
+# 🧠 AGENT CORE
 # =========================
-def parse_tool_call(text):
-    try:
-        return json.loads(text)
-    except:
-        return None
-
-
-def execute_tool_flow(goal, context):
-    tool_prompt = f"""
-You are an AI agent with tools.
-
-If needed, respond ONLY in JSON:
-
-{{
-  "tool": "tool_name",
-  "input": "tool_input"
-}}
-
-Tools available:
-- calculate
-- time
-- echo
-
-Goal:
-{goal}
-
-Context:
-{context}
-"""
-
-    response = call_llm(
-        [{"role": "user", "content": tool_prompt}],
-        tool_prompt
-    )
-
-    tool_call = parse_tool_call(response)
-
-    if tool_call and "tool" in tool_call:
-        tool_name = tool_call["tool"]
-        tool_input = tool_call.get("input", "")
-
-        tool_result = run_tool(tool_name, tool_input)
-
-        # Final response after tool
-        final = call_llm(
-            [{"role": "user", "content": f"Tool result: {tool_result}"}],
-            f"Tool result: {tool_result}"
-        )
-
-        return final + f"\n\n[Tool Used: {tool_name}]"
-
-    return response
-
-
-# =========================
-# 🧠 AGENT (YOUR LOOP — PRESERVED)
-# =========================
-def think(goal):
-    memory_text = get_relevant_memory(goal)
+def think(goal, user_id):
+    memory_text = get_relevant_memory(goal, user_id)
 
     # PLAN
     plan_prompt = f"""
@@ -267,39 +252,73 @@ Goal:
 {goal}
 """
 
-    # Use function calling system
-    result = execute_tool_flow(goal, execute_prompt)
+    result = call_llm(
+        [{"role": "user", "content": execute_prompt}],
+        execute_prompt
+    )
+
+    # TOOL TRIGGER (simple + reliable)
+    if "calculate" in goal.lower():
+        expr = goal.lower().split("calculate")[-1].strip()
+        tool_result = run_tool("calculate", expr)
+        result += f"\n\n[Tool Used]: {tool_result}"
+
+    if "time" in goal.lower():
+        tool_result = run_tool("time", None)
+        result += f"\n\n[Tool Used]: {tool_result}"
 
     return f"PLAN:\n{plan}\n\nRESULT:\n{result}"
 
 
 # =========================
-# 🌐 ROUTES
+# 🌐 API ROUTES
 # =========================
+
+@app.route("/register", methods=["POST"])
+def register():
+    data = request.json
+    email = data.get("email")
+    password = data.get("password")
+
+    success = create_user(email, password)
+
+    return jsonify({"success": success})
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.json
+    email = data.get("email")
+    password = data.get("password")
+
+    user_id = authenticate_user(email, password)
+
+    if user_id:
+        return jsonify({"user_id": user_id})
+
+    return jsonify({"error": "Invalid credentials"}), 401
+
+
 @app.route("/brain", methods=["POST"])
 def brain():
-    data = request.get_json()
+    data = request.json
 
-    if not data or "goal" not in data:
-        return jsonify({"error": "Missing goal"}), 400
+    goal = data.get("goal")
+    user_id = data.get("user_id")
 
-    goal = data["goal"]
+    if not goal or not user_id:
+        return jsonify({"error": "Missing goal or user_id"}), 400
 
-    result = think(goal)
+    result = think(goal, user_id)
 
-    save_memory(goal, result)
+    save_memory(user_id, goal, result)
 
     return jsonify({"result": result})
 
 
-@app.route("/test")
-def test():
-    return think("Give me a business idea with $100")
-
-
 @app.route("/")
 def home():
-    return "AI Brain (Multi-LLM + Tools + Memory + Function Calling) is running"
+    return "🚀 SaaS AI Brain Running"
 
 
 # =========================
