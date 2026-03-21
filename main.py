@@ -41,7 +41,7 @@ def use_tools(text):
             return "Could not calculate"
     return None
 
-# 🔥 SAFE OpenAI Call (FIXES YOUR ERROR)
+# 🔥 SAFE OpenAI Call
 def call_openai(messages):
     try:
         response = requests.post(
@@ -57,10 +57,21 @@ def call_openai(messages):
             timeout=15
         )
 
+        # 🔴 HTTP ERROR CHECK
+        if response.status_code != 200:
+            return f"HTTP ERROR: {response.status_code} - {response.text}"
+
         data = response.json()
 
+        # 🔍 DEBUG LOG
+        print("OPENAI RESPONSE:", data)
+
+        # 🔴 OPENAI ERROR CHECK
+        if "error" in data:
+            return f"OpenAI Error: {data['error']['message']}"
+
         if "choices" not in data:
-            return f"ERROR: {data}"
+            return f"Unexpected response format: {data}"
 
         return data["choices"][0]["message"]["content"]
 
@@ -120,8 +131,12 @@ Goal:
 # 🚀 Main API
 @app.route("/brain", methods=["POST"])
 def brain():
-    data = request.json
-    goal = data.get("goal")
+    data = request.get_json()
+
+    if not data or "goal" not in data:
+        return jsonify({"error": "Missing 'goal'"}), 400
+
+    goal = data["goal"]
 
     result = think(goal)
 
@@ -139,3 +154,8 @@ def test():
 @app.route("/")
 def home():
     return "AI Brain (Agent + Memory + Tools) is running"
+
+# 🚀 RUN (RENDER SAFE)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
