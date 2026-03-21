@@ -1,3 +1,17 @@
+import sqlite3
+
+conn = sqlite3.connect("memory.db", check_same_thread=False)
+c = conn.cursor()
+
+c.execute("""
+CREATE TABLE IF NOT EXISTS memory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    goal TEXT,
+    response TEXT
+)
+""")
+conn.commit()
+
 from flask import Flask, request, jsonify
 import requests
 import os
