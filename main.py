@@ -41,5 +41,3 @@ def brain():
 @app.route("/")
 def home():
     return "AI Brain is running"
-
-if __name__ == "__main__":
