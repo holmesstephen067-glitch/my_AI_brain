@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Brain Dashboard</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      border-radius: 6px;
+      border: none;
+    }
+
+    button {
+      background: #3b82f6;
+      color: white;
+      cursor: pointer;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 15px;
+      margin-top: 15px;
+      border-radius: 8px;
+    }
+
+    .output {
+      white-space: pre-wrap;
+      background: #020617;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>🚀 AI Brain Dashboard</h1>
+
+  <!-- AUTH -->
+  <div class="card">
+    <h3>Login / Register</h3>
+    <input id="email" placeholder="Email" />
+    <input id="password" type="password" placeholder="Password" />
+
+    <button onclick="register()">Register</button>
+    <button onclick="login()">Login</button>
+
+    <p id="authStatus"></p>
+  </div>
+
+  <!-- AI INPUT -->
+  <div class="card">
+    <h3>Enter Goal</h3>
+    <input id="goal" placeholder="What do you want the AI to do?" />
+    <button onclick="runBrain()">Run AI</button>
+
+    <div class="output" id="output"></div>
+  </div>
+
+</div>
+
+<script>
+let user_id = null;
+
+// =========================
+// REGISTER
+// =========================
+async function register() {
+  const res = await fetch("/register", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      email: document.getElementById("email").value,
+      password: document.getElementById("password").value
+    })
+  });
+
+  const data = await res.json();
+  document.getElementById("authStatus").innerText =
+    data.success ? "Registered!" : "Error registering";
+}
+
+
+// =========================
+// LOGIN
+// =========================
+async function login() {
+  const res = await fetch("/login", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      email: document.getElementById("email").value,
+      password: document.getElementById("password").value
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.user_id) {
+    user_id = data.user_id;
+    document.getElementById("authStatus").innerText =
+      "Logged in as user: " + user_id;
+  } else {
+    document.getElementById("authStatus").innerText =
+      "Login failed";
+  }
+}
+
+
+// =========================
+// RUN AI
+// =========================
+async function runBrain() {
+  const goal = document.getElementById("goal").value;
+
+  if (!user_id) {
+    alert("Please login first");
+    return;
+  }
+
+  const res = await fetch("/brain", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      goal: goal,
+      user_id: user_id
+    })
+  });
+
+  const data = await res.json();
+
+  document.getElementById("output").innerText =
+    data.result || data.error;
+}
+</script>
+
+</body>
+</html>
