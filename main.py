@@ -41,6 +41,32 @@ def use_tools(text):
             return "Could not calculate"
     return None
 
+# 🔥 SAFE OpenAI Call (FIXES YOUR ERROR)
+def call_openai(messages):
+    try:
+        response = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "gpt-4o-mini",
+                "messages": messages
+            },
+            timeout=15
+        )
+
+        data = response.json()
+
+        if "choices" not in data:
+            return f"ERROR: {data}"
+
+        return data["choices"][0]["message"]["content"]
+
+    except Exception as e:
+        return f"ERROR: {str(e)}"
+
 # 🧠 AI Brain (Agent Loop)
 def think(goal):
     memory = get_memory()
@@ -52,35 +78,21 @@ def think(goal):
     if not OPENAI_API_KEY:
         return "ERROR: Missing OPENAI_API_KEY"
 
-    try:
-        # 🧠 PLAN
-        plan_prompt = f"""
+    # 🧠 PLAN
+    plan_prompt = f"""
 Break this goal into step-by-step actions.
 
 Goal:
 {goal}
 """
 
-        plan_response = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {OPENAI_API_KEY}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": "gpt-4o-mini",
-                "messages": [
-                    {"role": "system", "content": "You are a planning AI."},
-                    {"role": "user", "content": plan_prompt}
-                ]
-            },
-            timeout=15
-        )
+    plan = call_openai([
+        {"role": "system", "content": "You are a planning AI."},
+        {"role": "user", "content": plan_prompt}
+    ])
 
-        plan = plan_response.json()["choices"][0]["message"]["content"]
-
-        # 🧠 EXECUTE
-        execute_prompt = f"""
+    # 🧠 EXECUTE
+    execute_prompt = f"""
 Use this plan and memory to complete the goal.
 
 Previous memory:
@@ -93,33 +105,17 @@ Goal:
 {goal}
 """
 
-        execute_response = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {OPENAI_API_KEY}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": "gpt-4o-mini",
-                "messages": [
-                    {"role": "system", "content": "You execute plans and produce results."},
-                    {"role": "user", "content": execute_prompt}
-                ]
-            },
-            timeout=15
-        )
+    result = call_openai([
+        {"role": "system", "content": "You execute plans and produce results."},
+        {"role": "user", "content": execute_prompt}
+    ])
 
-        result = execute_response.json()["choices"][0]["message"]["content"]
+    # 🧰 TOOL CHECK
+    tool_result = use_tools(goal)
+    if tool_result:
+        result += f"\n\n[Tool Used]: {tool_result}"
 
-        # 🧰 TOOL CHECK
-        tool_result = use_tools(goal)
-        if tool_result:
-            result += f"\n\n[Tool Used]: {tool_result}"
-
-        return f"PLAN:\n{plan}\n\nRESULT:\n{result}"
-
-    except Exception as e:
-        return f"ERROR: {str(e)}"
+    return f"PLAN:\n{plan}\n\nRESULT:\n{result}"
 
 # 🚀 Main API
 @app.route("/brain", methods=["POST"])
@@ -133,7 +129,7 @@ def brain():
 
     return jsonify({"result": result})
 
-# 🌐 Simple Browser Test (NO POST NEEDED)
+# 🌐 Easy Phone Test
 @app.route("/test")
 def test():
     result = think("Give me a business idea I can start with $100")
