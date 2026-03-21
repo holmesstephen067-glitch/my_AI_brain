@@ -12,7 +12,7 @@ app = Flask(__name__)
 # 🔐 API KEYS
 # =========================
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")  # add later
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 # =========================
 # 🧠 DATABASE
@@ -29,12 +29,14 @@ CREATE TABLE IF NOT EXISTS memory (
 """)
 conn.commit()
 
-
 # =========================
-# 💾 MEMORY SYSTEM
+# 💾 MEMORY
 # =========================
 def save_memory(goal, response):
-    c.execute("INSERT INTO memory (goal, response) VALUES (?, ?)", (goal, response))
+    c.execute(
+        "INSERT INTO memory (goal, response) VALUES (?, ?)",
+        (goal, response)
+    )
     conn.commit()
 
 
@@ -45,15 +47,14 @@ def get_memory():
 
 def get_relevant_memory(goal):
     memory = get_memory()
-
     goal_words = set(goal.lower().split())
+
     scored = []
 
     for g, r in memory:
         memory_words = set(g.lower().split())
-        overlap = goal_words.intersection(memory_words)
+        score = len(goal_words.intersection(memory_words))
 
-        score = len(overlap)
         if score > 0:
             scored.append((score, g, r))
 
@@ -68,7 +69,7 @@ def get_relevant_memory(goal):
 def safe_calculate(expression):
     try:
         if not re.match(r"^[0-9+\-*/(). ]+$", expression):
-            return "Invalid math expression"
+            return "Invalid expression"
 
         return str(eval(expression, {"__builtins__": {}}))
     except:
@@ -106,7 +107,6 @@ def run_tool(tool_name, tool_input):
 # 🔥 LLM CALLS
 # =========================
 
-# --- OpenAI ---
 def call_openai(messages):
     if not OPENAI_API_KEY:
         return None
@@ -135,7 +135,6 @@ def call_openai(messages):
         return None
 
 
-# --- Gemini (READY BUT OPTIONAL) ---
 def call_gemini(prompt):
     if not GEMINI_API_KEY:
         return None
@@ -146,9 +145,7 @@ def call_gemini(prompt):
         res = requests.post(
             url,
             json={
-                "contents": [
-                    {"parts": [{"text": prompt}]}
-                ]
+                "contents": [{"parts": [{"text": prompt}]}]
             },
             timeout=20
         )
@@ -157,7 +154,6 @@ def call_gemini(prompt):
             return None
 
         data = res.json()
-
         return data["candidates"][0]["content"]["parts"][0]["text"]
 
     except:
@@ -168,20 +164,13 @@ def call_gemini(prompt):
 # 🧠 LLM ROUTER
 # =========================
 def call_llm(messages, prompt_text):
-    """
-    Smart routing system:
-    1. Try OpenAI
-    2. Fallback to Gemini
-    3. Fallback to simple response
-    """
-
-    # Try OpenAI
     response = call_openai(messages)
+
     if response:
         return response
 
-    # Try Gemini
     response = call_gemini(prompt_text)
+
     if response:
         return response
 
@@ -189,12 +178,69 @@ def call_llm(messages, prompt_text):
 
 
 # =========================
-# 🧠 AI BRAIN (YOUR LOOP — IMPROVED)
+# 🧠 FUNCTION CALLING (NEXT-GEN)
+# =========================
+def parse_tool_call(text):
+    try:
+        return json.loads(text)
+    except:
+        return None
+
+
+def execute_tool_flow(goal, context):
+    tool_prompt = f"""
+You are an AI agent with tools.
+
+If needed, respond ONLY in JSON:
+
+{{
+  "tool": "tool_name",
+  "input": "tool_input"
+}}
+
+Tools available:
+- calculate
+- time
+- echo
+
+Goal:
+{goal}
+
+Context:
+{context}
+"""
+
+    response = call_llm(
+        [{"role": "user", "content": tool_prompt}],
+        tool_prompt
+    )
+
+    tool_call = parse_tool_call(response)
+
+    if tool_call and "tool" in tool_call:
+        tool_name = tool_call["tool"]
+        tool_input = tool_call.get("input", "")
+
+        tool_result = run_tool(tool_name, tool_input)
+
+        # Final response after tool
+        final = call_llm(
+            [{"role": "user", "content": f"Tool result: {tool_result}"}],
+            f"Tool result: {tool_result}"
+        )
+
+        return final + f"\n\n[Tool Used: {tool_name}]"
+
+    return response
+
+
+# =========================
+# 🧠 AGENT (YOUR LOOP — PRESERVED)
 # =========================
 def think(goal):
     memory_text = get_relevant_memory(goal)
 
-    # 🧠 PLAN
+    # PLAN
     plan_prompt = f"""
 Break this goal into steps.
 
@@ -207,7 +253,7 @@ Goal:
         plan_prompt
     )
 
-    # 🧠 EXECUTE
+    # EXECUTE
     execute_prompt = f"""
 Use this plan and memory.
 
@@ -221,29 +267,14 @@ Goal:
 {goal}
 """
 
-    result = call_llm(
-        [{"role": "user", "content": execute_prompt}],
-        execute_prompt
-    )
-
-    # 🧰 TOOL DETECTION
-    tool_result = None
-
-    if "calculate" in goal.lower():
-        expression = goal.lower().split("calculate")[-1].strip()
-        tool_result = run_tool("calculate", expression)
-
-    elif "time" in goal.lower():
-        tool_result = run_tool("time", None)
-
-    if tool_result:
-        result += f"\n\n[Tool Used]: {tool_result}"
+    # Use function calling system
+    result = execute_tool_flow(goal, execute_prompt)
 
     return f"PLAN:\n{plan}\n\nRESULT:\n{result}"
 
 
 # =========================
-# 🌐 API ROUTES
+# 🌐 ROUTES
 # =========================
 @app.route("/brain", methods=["POST"])
 def brain():
@@ -268,7 +299,7 @@ def test():
 
 @app.route("/")
 def home():
-    return "AI Brain (Multi-LLM + Tools + Memory) is running"
+    return "AI Brain (Multi-LLM + Tools + Memory + Function Calling) is running"
 
 
 # =========================
