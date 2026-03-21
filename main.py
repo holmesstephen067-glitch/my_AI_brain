@@ -8,10 +8,15 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# 🔐 API Key
+# =========================
+# 🔐 API KEYS
+# =========================
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")  # add later
 
-# 🧠 Database Setup
+# =========================
+# 🧠 DATABASE
+# =========================
 conn = sqlite3.connect("memory.db", check_same_thread=False)
 c = conn.cursor()
 
@@ -24,49 +29,46 @@ CREATE TABLE IF NOT EXISTS memory (
 """)
 conn.commit()
 
+
 # =========================
 # 💾 MEMORY SYSTEM
 # =========================
 def save_memory(goal, response):
-    c.execute(
-        "INSERT INTO memory (goal, response) VALUES (?, ?)",
-        (goal, response)
-    )
+    c.execute("INSERT INTO memory (goal, response) VALUES (?, ?)", (goal, response))
     conn.commit()
 
 
 def get_memory():
-    c.execute("SELECT goal, response FROM memory ORDER BY id DESC LIMIT 5")
+    c.execute("SELECT goal, response FROM memory ORDER BY id DESC LIMIT 10")
     return c.fetchall()
 
 
-# =========================
-# 🔍 LIGHT MEMORY MATCH (IMPROVED)
-# =========================
 def get_relevant_memory(goal):
     memory = get_memory()
 
-    relevant = []
     goal_words = set(goal.lower().split())
+    scored = []
 
     for g, r in memory:
         memory_words = set(g.lower().split())
         overlap = goal_words.intersection(memory_words)
 
-        if len(overlap) > 0:
-            relevant.append(f"{g} -> {r}")
+        score = len(overlap)
+        if score > 0:
+            scored.append((score, g, r))
 
-    return "\n".join(relevant)
+    scored.sort(reverse=True, key=lambda x: x[0])
+
+    return "\n".join([f"{g} -> {r}" for _, g, r in scored[:5]])
 
 
 # =========================
-# 🧰 SAFE TOOL SYSTEM
+# 🧰 SAFE TOOLS
 # =========================
 def safe_calculate(expression):
     try:
-        # Allow only safe characters
         if not re.match(r"^[0-9+\-*/(). ]+$", expression):
-            return "Invalid characters in math expression"
+            return "Invalid math expression"
 
         return str(eval(expression, {"__builtins__": {}}))
     except:
@@ -77,15 +79,22 @@ def get_time():
     return datetime.now().isoformat()
 
 
+def echo(text):
+    return text
+
+
+# =========================
 # 🧰 TOOL REGISTRY
+# =========================
 TOOLS = {
     "calculate": safe_calculate,
-    "get_time": get_time
+    "time": get_time,
+    "echo": echo
 }
 
 
 # =========================
-# 🧠 TOOL EXECUTION (REAL)
+# 🧠 TOOL EXECUTION
 # =========================
 def run_tool(tool_name, tool_input):
     if tool_name in TOOLS:
@@ -94,11 +103,16 @@ def run_tool(tool_name, tool_input):
 
 
 # =========================
-# 🔥 OPENAI CALL (CLEAN + SAFE)
+# 🔥 LLM CALLS
 # =========================
+
+# --- OpenAI ---
 def call_openai(messages):
+    if not OPENAI_API_KEY:
+        return None
+
     try:
-        response = requests.post(
+        res = requests.post(
             "https://api.openai.com/v1/chat/completions",
             headers={
                 "Authorization": f"Bearer {OPENAI_API_KEY}",
@@ -111,47 +125,93 @@ def call_openai(messages):
             timeout=20
         )
 
-        if response.status_code != 200:
-            return f"HTTP ERROR: {response.status_code} - {response.text}"
+        if res.status_code != 200:
+            return None
 
-        data = response.json()
-
-        if "error" in data:
-            return f"OpenAI Error: {data['error']['message']}"
-
+        data = res.json()
         return data["choices"][0]["message"]["content"]
 
-    except Exception as e:
-        return f"ERROR: {str(e)}"
+    except:
+        return None
+
+
+# --- Gemini (READY BUT OPTIONAL) ---
+def call_gemini(prompt):
+    if not GEMINI_API_KEY:
+        return None
+
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+
+        res = requests.post(
+            url,
+            json={
+                "contents": [
+                    {"parts": [{"text": prompt}]}
+                ]
+            },
+            timeout=20
+        )
+
+        if res.status_code != 200:
+            return None
+
+        data = res.json()
+
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+
+    except:
+        return None
 
 
 # =========================
-# 🧠 AI BRAIN (YOUR LOOP - IMPROVED)
+# 🧠 LLM ROUTER
+# =========================
+def call_llm(messages, prompt_text):
+    """
+    Smart routing system:
+    1. Try OpenAI
+    2. Fallback to Gemini
+    3. Fallback to simple response
+    """
+
+    # Try OpenAI
+    response = call_openai(messages)
+    if response:
+        return response
+
+    # Try Gemini
+    response = call_gemini(prompt_text)
+    if response:
+        return response
+
+    return "No LLM available. Please check API keys."
+
+
+# =========================
+# 🧠 AI BRAIN (YOUR LOOP — IMPROVED)
 # =========================
 def think(goal):
-    if not OPENAI_API_KEY:
-        return "ERROR: Missing OPENAI_API_KEY"
-
     memory_text = get_relevant_memory(goal)
 
-    # 🧠 PLAN STEP
+    # 🧠 PLAN
     plan_prompt = f"""
-Break this goal into step-by-step actions.
+Break this goal into steps.
 
 Goal:
 {goal}
 """
 
-    plan = call_openai([
-        {"role": "system", "content": "You are a planning AI."},
-        {"role": "user", "content": plan_prompt}
-    ])
+    plan = call_llm(
+        [{"role": "user", "content": plan_prompt}],
+        plan_prompt
+    )
 
-    # 🧠 EXECUTION STEP
+    # 🧠 EXECUTE
     execute_prompt = f"""
-Use this plan and memory to complete the goal.
+Use this plan and memory.
 
-Relevant Memory:
+Memory:
 {memory_text}
 
 Plan:
@@ -161,20 +221,20 @@ Goal:
 {goal}
 """
 
-    result = call_openai([
-        {"role": "system", "content": "You execute plans and produce results."},
-        {"role": "user", "content": execute_prompt}
-    ])
+    result = call_llm(
+        [{"role": "user", "content": execute_prompt}],
+        execute_prompt
+    )
 
-    # 🧰 TOOL DETECTION (SAFE VERSION)
+    # 🧰 TOOL DETECTION
     tool_result = None
 
     if "calculate" in goal.lower():
         expression = goal.lower().split("calculate")[-1].strip()
         tool_result = run_tool("calculate", expression)
 
-    if "time" in goal.lower():
-        tool_result = run_tool("get_time", None)
+    elif "time" in goal.lower():
+        tool_result = run_tool("time", None)
 
     if tool_result:
         result += f"\n\n[Tool Used]: {tool_result}"
@@ -190,7 +250,7 @@ def brain():
     data = request.get_json()
 
     if not data or "goal" not in data:
-        return jsonify({"error": "Missing 'goal'"}), 400
+        return jsonify({"error": "Missing goal"}), 400
 
     goal = data["goal"]
 
@@ -203,16 +263,16 @@ def brain():
 
 @app.route("/test")
 def test():
-    return think("Give me a business idea I can start with $100")
+    return think("Give me a business idea with $100")
 
 
 @app.route("/")
 def home():
-    return "AI Brain (Agent + Memory + Tools) is running"
+    return "AI Brain (Multi-LLM + Tools + Memory) is running"
 
 
 # =========================
-# 🚀 RUN (RENDER SAFE)
+# 🚀 RUN
 # =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
